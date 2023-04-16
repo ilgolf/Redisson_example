@@ -39,12 +39,20 @@ class TicketService(
             .collect(Collectors.toList()))
     }
 
-    @Transactional
     fun payment(request: PaymentRequestDto): PaymentResponseDto {
 
         val lockName = "${request.ticketId}"
-        var totalPrice = BigDecimal(0)
 
+        paymentProcess(lockName, request)
+
+        return PaymentResponseDto(ACCOUNT_NUMBER)
+    }
+
+    @Transactional
+    protected fun paymentProcess(
+        lockName: String,
+        request: PaymentRequestDto
+    ) {
         ticketLockService.withLock(redissonClient, lockName) {
             val ticket = ticketRepository.findByIdOrNull(request.ticketId)
                 ?: throw TicketNotFoundException()
@@ -54,17 +62,17 @@ class TicketService(
             }
 
             ticket.decreaseStock(request.stock)
-            totalPrice = ticket.calculateTicketPrice(request.stock)
+
+            val totalPrice = ticket.calculateTicketPrice(request.stock)
+
+            paymentService.createPayment(
+                PaymentCreateDto(
+                    ticketId = request.ticketId,
+                    memberId = request.memberId,
+                    accountNumber = request.accountNumber,
+                    totalPrice = totalPrice
+                )
+            )
         }
-
-        paymentService.createPayment(
-            PaymentCreateDto(
-                ticketId = request.ticketId,
-                memberId = request.memberId,
-                accountNumber = request.accountNumber,
-                totalPrice = totalPrice)
-        )
-
-        return PaymentResponseDto(ACCOUNT_NUMBER)
     }
 }
