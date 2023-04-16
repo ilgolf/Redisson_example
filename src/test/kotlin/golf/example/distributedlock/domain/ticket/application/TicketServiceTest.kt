@@ -49,6 +49,9 @@ constructor(
         memberId = memberRepository.save(GivenMember.toMember()).memberId
     }
 
+    /**
+     * h2 데이터 베이스 사용 시 테스트 통과 X 좀 더 알아볼 필요 있음.
+     */
     @Test
     @DisplayName("payment 동시성 테스트")
     fun payment() {
